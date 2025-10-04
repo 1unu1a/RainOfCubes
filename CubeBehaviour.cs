@@ -1,39 +1,62 @@
 using UnityEngine;
 using System.Collections;
 
-public class CubeBehaviour : MonoBehaviour
+[RequireComponent(typeof(Renderer))]
+[RequireComponent(typeof(Rigidbody))]
+public class CubeBehaviour : MonoBehaviour, IPoolObject
 {
+    [Header("Visuals")]
     [SerializeField] private Color defaultColor = Color.gray;
-    private Renderer _renderer;
-    private bool _activated = false;
+    [SerializeField] private Renderer _renderer;
 
-    private void Awake()
+    [Header("Physics")]
+    [SerializeField] private Rigidbody _rigidbody;
+
+    private bool _activated;
+
+    private void Reset()
     {
         _renderer = GetComponent<Renderer>();
+        _rigidbody = GetComponent<Rigidbody>();
     }
 
-    private void OnEnable()
+    public void Init()
     {
+        _activated = false;
+        _renderer.material.color = defaultColor;
+        ResetPhysics();
+    }
+
+    public void DeInit()
+    {
+        StopAllCoroutines();
         _activated = false;
         _renderer.material.color = defaultColor;
     }
 
+    public void ResetPhysics()
+    {
+        _rigidbody.linearVelocity = Vector3.zero;
+        _rigidbody.angularVelocity = Vector3.zero;
+    }
+
     private void OnCollisionEnter(Collision collision)
     {
-        if (!_activated && collision.gameObject.CompareTag("Platform"))
+        if (_activated) return;
+
+        if (collision.gameObject.TryGetComponent(out Platform _))
         {
             _activated = true;
-            
             _renderer.material.color = Random.ColorHSV();
-            
+
             float lifetime = Random.Range(2f, 5f);
-            StartCoroutine(DeactivateAfterTime(lifetime));
+            StartCoroutine(ReturnToPoolAfterTime(lifetime));
         }
     }
 
-    private IEnumerator DeactivateAfterTime(float time)
+    private IEnumerator ReturnToPoolAfterTime(float time)
     {
         yield return new WaitForSeconds(time);
-        CubePool.Instance.ReturnCube(gameObject);
+        CubeSpawner.Pool.Return(this);
     }
 }

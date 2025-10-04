@@ -3,9 +3,20 @@ using System.Collections;
 
 public class CubeSpawner : MonoBehaviour
 {
+    [Header("Spawn Settings")]
+    [SerializeField] private CubeBehaviour cubePrefab;
     [SerializeField] private float spawnInterval = 1f;
-    [SerializeField] private Vector2 spawnRange = new Vector2(-5f, 5f);
+    [SerializeField] private Vector2 spawnRange = new(-5f, 5f);
     [SerializeField] private float spawnHeight = 10f;
+    [SerializeField] private int initialPoolSize = 20;
+
+    public static ObjectPool<CubeBehaviour> Pool { get; private set; }
+
+    private void Awake()
+    {
+        Pool = new ObjectPool<CubeBehaviour>();
+        Pool.Init(cubePrefab, initialPoolSize);
+    }
 
     private void Start()
     {
@@ -23,21 +34,17 @@ public class CubeSpawner : MonoBehaviour
 
     private void SpawnCube()
     {
-        GameObject cube = CubePool.Instance.GetCube();
-        Vector3 position = new Vector3(
+        CubeBehaviour cube = Pool.Get();
+        cube.transform.SetPositionAndRotation(GetRandomPosition(), Quaternion.identity);
+        cube.Init();
+    }
+
+    private Vector3 GetRandomPosition()
+    {
+        return new Vector3(
             Random.Range(spawnRange.x, spawnRange.y),
             spawnHeight,
             Random.Range(spawnRange.x, spawnRange.y)
         );
-        cube.transform.position = position;
-        cube.transform.rotation = Quaternion.identity;
-
-        Rigidbody rb = cube.GetComponent<Rigidbody>();
-        if (rb == null)
-        {
-            rb = cube.AddComponent<Rigidbody>();
-        }
-        rb.linearVelocity = Vector3.zero;
-        rb.angularVelocity = Vector3.zero;
     }
 }
